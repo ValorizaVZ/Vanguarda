@@ -1178,103 +1178,52 @@ function syncErr(err){
 
 // ── CARREGAMENTO INICIAL ──────────────────────────────────────────
 async function init(){
-  // 1. Carrega cache local primeiro — resposta imediata
   const hasCached = loadLocalCache();
   buildSidebar();
   updMo();
   CACHE._loaded = true;
 
-  // Inicializar tela de login
+  // Inicializar UI do login
   var loginEl=document.getElementById('loginScreen');
   var loginLogo=document.getElementById('loginLogo');
   var loginTtl=document.getElementById('loginTtl');
   if(loginLogo) loginLogo.textContent=(CFG.name||'V').charAt(0).toUpperCase();
   if(loginTtl) loginTtl.textContent=CFG.name||'Valoriza';
 
-  // Verificar sessão ativa
+  // Inicializar seletor de ano do fluxo de caixa
+  initCashflowAno();
+
+  // Mostrar conteúdo (sem login por ora) enquanto carrega
+  if(loginEl) loginEl.style.display='none';
+  restorePage();
+  renderCurrentPage();
+  setSyncPill('busy', hasCached?'Atualizando…':'Carregando…');
+
+  // Puxar do Sheets ANTES de mostrar login — garante usuários atualizados
+  try{
+    await pullFromSheets();
+    renderCurrentPage();
+  } catch(e){
+    setSyncPill('err', 'Sem conexão');
+  }
+
+  // Com dados carregados, verificar sessão e mostrar login se necessário
   if(checkSession()){
     if(loginEl) loginEl.style.display='none';
     applyRoleUI();
   } else {
     if(loginEl) loginEl.style.display='flex';
-    // Se não tem usuários — mostrar setup inicial em vez do login
     var users=getUsers();
     if(!users.length){
       document.getElementById('loginSub').textContent='Configure o administrador do sistema';
       showStep('stepSetup');
-    }
-  }
-
-  if(hasCached){
-    restorePage();
-    renderCurrentPage();
-    setSyncPill('busy', 'Atualizando…');
-  } else {
-    restorePage();
-    renderCurrentPage();
-    setSyncPill('busy', 'Carregando…');
-  }
-
-  // Inicializar seletor de ano do fluxo de caixa
-  initCashflowAno();
-  // 2. Sempre tenta buscar do Sheets em background
-  // Se o Sheets tiver dados → atualiza (garante que outro computador veja tudo)
-  // Se o Sheets estiver vazio e tiver dados locais → mantém local (não perde nada)
-  try{
-    await pullFromSheets();
-    renderCurrentPage();
-  } catch(e){
-    // Sem internet ou erro — usa o que tem no cache local
-    setSyncPill('err', 'Sem conexão');
-    if(!hasCached){
-      toast('Sem conexão com o Sheets. Verifique a internet.', 'warn');
+    } else {
+      document.getElementById('loginSub').textContent='Entre com seu email e senha';
+      showStep('stepLogin');
     }
   }
 }
 
-function fixYm(raw){
-  if(!raw) return null;
-  var s=fixDateStr(String(raw).trim());
-  if(!s) return null;
-  return s.slice(0,7);
-}
-
-function fixDateStr(v){
-  // Converte qualquer formato de data para string simples
-  if(!v) return '';
-  var s=String(v).trim();
-  // Já é YYYY-MM-DD
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // Já é YYYY-MM
-  if(/^\d{4}-\d{2}$/.test(s)) return s;
-  // É data completa (ex: "Thu Jan 01 2026...")
-  try{
-    var d=new Date(s);
-    if(!isNaN(d.getTime())){
-      var y=d.getFullYear();
-      var m=String(d.getMonth()+1).padStart(2,'0');
-      var day=String(d.getDate()).padStart(2,'0');
-      return y+'-'+m+'-'+day;
-    }
-  }catch(e){}
-  return s;
-}
-
-function fixValueStr(v){
-  // Converte qualquer formato para número float (uso interno)
-  if(v===null||v===undefined||v==='') return '0';
-  if(typeof v==='number') return String(Math.round(v*100)/100);
-  var s=String(v).trim();
-  if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.');
-  var n=parseFloat(s);
-  return isNaN(n)?'0':String(Math.round(n*100)/100);
-}
-
-function fmtBRForSheets(v){
-  // Formata número para salvar no Sheets no padrão BR: 1.000,89
-  var n=parseFloat(fixValueStr(v))||0;
-  return n.toFixed(2).replace('.',',').replace(/(\d)(?=(\d{3})+,)/g,'$1.');
-}
 
 async function pullFromSheets(){
   const data = await api({action:'readAll'});
@@ -1328,18 +1277,19 @@ async function pullFromSheets(){
   });
   // Histórico
   CACHE.history = data.history || [];
-  // Settings — preservar tipos novos criados pelo usuário
+  // Settings — preservar tipos e usuários locais ao puxar do Sheets
   var oldTypesRaw = CACHE.settings['__types__'] || '';
+  var oldUsersRaw = CACHE.settings['__users__'] || '';
   CACHE.settings = {};
   (data.settings||[]).forEach(function(s){ CACHE.settings[s.key]=s.value; });
-  // Mesclar tipos: se Sheets não tiver __types__ ou tiver menos, preservar os locais
+
+  // Mesclar tipos customizados
   if(oldTypesRaw){
     try{
       var oldTypes=JSON.parse(oldTypesRaw)||[];
       var newTypesRaw=CACHE.settings['__types__']||'[]';
       var newTypes=JSON.parse(newTypesRaw)||[];
       var defaultIds=TYP_DEFAULT.map(function(t){return t.id;});
-      // Juntar: tipos do Sheets + tipos locais que não estão no Sheets
       var merged=newTypes.slice();
       oldTypes.forEach(function(t){
         if(defaultIds.indexOf(t.id)<0 && !merged.find(function(x){return x.id===t.id;})){
@@ -1348,6 +1298,18 @@ async function pullFromSheets(){
       });
       if(merged.length>0) CACHE.settings['__types__']=JSON.stringify(merged);
     }catch(e){}
+  }
+
+  // Preservar usuários: se Sheets veio vazio mas local tem usuários, manter local
+  // Se Sheets tem usuários, usar os do Sheets (fonte de verdade)
+  var sheetsUsers=[];
+  try{ sheetsUsers=JSON.parse(CACHE.settings['__users__']||'[]')||[]; }catch(e){}
+  var localUsers=[];
+  try{ localUsers=JSON.parse(oldUsersRaw||'[]')||[]; }catch(e){}
+  if(!sheetsUsers.length && localUsers.length){
+    // Sheets vazio mas local tem — restaurar local e sincronizar pro Sheets
+    CACHE.settings['__users__']=oldUsersRaw;
+    queueWrite('settings',[{key:'__users__',value:oldUsersRaw}]);
   }
   // Serviços
   CACHE.services = (data.services||[]).map(function(s){
@@ -4322,9 +4284,14 @@ function getUsers(){
   }catch(e){ return []; }
 }
 function saveUsers(users){
-  CACHE.settings['__users__']=JSON.stringify(users);
+  var v=JSON.stringify(users);
+  CACHE.settings['__users__']=v;
   saveLocalCache();
-  queueWrite('settings',[{key:'__users__',value:JSON.stringify(users)}]);
+  // Salvar imediatamente no Sheets sem debounce
+  try{
+    api({action:'batchWrite',sheet:'settings',rows:[{key:'__users__',value:v}]});
+  }catch(e){}
+  queueWrite('settings',[{key:'__users__',value:v}]);
 }
 function hashSimple(str){
   var h=0;
