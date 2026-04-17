@@ -1182,6 +1182,7 @@ async function init(){
   buildSidebar();
   updMo();
   CACHE._loaded = true;
+  initCashflowAno();
 
   // Inicializar UI do login
   var loginEl=document.getElementById('loginScreen');
@@ -1190,38 +1191,40 @@ async function init(){
   if(loginLogo) loginLogo.textContent=(CFG.name||'V').charAt(0).toUpperCase();
   if(loginTtl) loginTtl.textContent=CFG.name||'Valoriza';
 
-  // Inicializar seletor de ano do fluxo de caixa
-  initCashflowAno();
+  // ── SEGURANÇA: manter login visível até autenticar ──────────────
+  if(loginEl) loginEl.style.display='flex';
 
-  // Mostrar conteúdo (sem login por ora) enquanto carrega
-  if(loginEl) loginEl.style.display='none';
-  restorePage();
-  renderCurrentPage();
-  setSyncPill('busy', hasCached?'Atualizando…':'Carregando…');
-
-  // Puxar do Sheets ANTES de mostrar login — garante usuários atualizados
-  try{
-    await pullFromSheets();
-    renderCurrentPage();
-  } catch(e){
-    setSyncPill('err', 'Sem conexão');
-  }
-
-  // Com dados carregados, verificar sessão e mostrar login se necessário
+  // Verificar sessão ativa primeiro (sem bater no Sheets)
   if(checkSession()){
+    // Sessão válida — entrar direto e carregar dados
     if(loginEl) loginEl.style.display='none';
     applyRoleUI();
-  } else {
-    if(loginEl) loginEl.style.display='flex';
-    var users=getUsers();
-    if(!users.length){
-      document.getElementById('loginSub').textContent='Configure o administrador do sistema';
-      showStep('stepSetup');
-    } else {
-      document.getElementById('loginSub').textContent='Entre com seu email e senha';
-      showStep('stepLogin');
-    }
+    restorePage();
+    renderCurrentPage();
+    setSyncPill('busy','Atualizando…');
+    try{ await pullFromSheets(); renderCurrentPage(); }
+    catch(e){ setSyncPill('err','Sem conexão'); }
+    return;
   }
+
+  // Sem sessão — puxar Sheets só para verificar usuários (sem mostrar dados)
+  setSyncPill('busy','Verificando…');
+  try{
+    await pullFromSheets();
+  } catch(e){
+    setSyncPill('err','Sem conexão');
+  }
+
+  // Mostrar tela correta de login
+  var users=getUsers();
+  if(!users.length){
+    document.getElementById('loginSub').textContent='Configure o administrador do sistema';
+    showStep('stepSetup');
+  } else {
+    document.getElementById('loginSub').textContent='Entre com seu email e senha';
+    showStep('stepLogin');
+  }
+  // Login permanece visível — dados NÃO são renderizados ainda
 }
 
 
@@ -4391,6 +4394,10 @@ function loginSuccess(){
        sessionStorage.setItem('vz_email_'+LS_KEY, _loginEmail||''); }catch(e){}
   document.getElementById('loginScreen').style.display='none';
   applyRoleUI();
+  // Carregar e renderizar dados SÓ após autenticar
+  restorePage();
+  renderCurrentPage();
+  setSyncPill('ok','Autenticado');
   toast('Bem-vindo'+((_loginEmail)?' '+_loginEmail.split('@')[0]:'')+'! Perfil: '+(_userRole==='financeiro'?'Financeiro':'Visualizador'));
 }
 
