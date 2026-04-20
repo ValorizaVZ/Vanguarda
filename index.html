@@ -258,23 +258,7 @@ tbody td.dim{color:var(--t3);font-size:11px}
 .cfg-cdot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;flex-shrink:0}
 .cfg-cdot.sel{border-color:#fff;outline:2px solid var(--co);box-shadow:0 2px 6px rgba(0,0,0,.2)}
 
-/* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rxl);padding:36px 36px 28px;width:360px;box-shadow:var(--shl);text-align:center}
-.login-logo{width:48px;height:48px;border-radius:14px;background:var(--co);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;font-weight:700;color:#fff}
-.login-ttl{font-size:18px;font-weight:700;color:var(--t1);margin-bottom:4px}
-.login-sub{font-size:12px;color:var(--t3);margin-bottom:24px}
-.login-field{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);font-size:13px;color:var(--t1);background:var(--surface);outline:none;transition:border-color var(--tf);margin-bottom:10px;box-sizing:border-box;text-align:left}
-.login-field:focus{border-color:var(--co)}
-.login-btn{width:100%;padding:11px;background:var(--co);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:background var(--tf);margin-top:4px}
-.login-btn:hover{background:var(--blue-dk)}
-.login-err{font-size:11.5px;color:var(--red);margin-top:10px;min-height:16px}
-.login-step{display:none}
-.login-step.act{display:block}
-.pwd-wrap{position:relative;margin-bottom:10px}
-.pwd-wrap .login-field{margin-bottom:0;padding-right:38px}
-.pwd-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--t4);padding:2px;display:flex;align-items:center;transition:color var(--tf)}
-.pwd-eye:hover{color:var(--t2)}
+
 /* ── META ANUAL ── */
 .meta-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 20px;box-shadow:var(--sh);margin-bottom:15px;transition:box-shadow var(--tm)}
 .meta-card:hover{box-shadow:var(--shm)}
@@ -444,79 +428,7 @@ body.pres #app{margin-top:34px}
   <button style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:3px 11px;border-radius:5px;cursor:pointer;font-family:var(--font);font-size:11.5px" onclick="exitPres()">✕ Sair</button>
 </div>
 
-<!-- TELA DE LOGIN -->
-<div id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo" id="loginLogo"></div>
-    <div class="login-ttl" id="loginTtl">Valoriza</div>
-    <div class="login-sub" id="loginSub">Entre com seu email e senha</div>
-
-    <!-- PASSO 0: Setup inicial (apenas primeira vez) -->
-    <div class="login-step" id="stepSetup">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:16px;text-align:left;background:var(--green-lt);padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--green)">
-        Primeiro acesso ao sistema. Configure o administrador principal.
-      </div>
-      <input class="login-field" id="setupEmail" type="email" placeholder="Seu email" style="margin-bottom:10px"
-        onkeydown="if(event.keyCode===13)document.getElementById('setupPwd1').focus()">
-      <div class="pwd-wrap">
-        <input class="login-field" id="setupPwd1" type="password" placeholder="Criar senha"
-          onkeydown="if(event.keyCode===13)document.getElementById('setupPwd2').focus()">
-        <button type="button" class="pwd-eye" onclick="togglePwd('setupPwd1',this)" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <div class="pwd-wrap">
-        <input class="login-field" id="setupPwd2" type="password" placeholder="Confirmar senha"
-          onkeydown="if(event.keyCode===13)doSetup()">
-        <button type="button" class="pwd-eye" onclick="togglePwd('setupPwd2',this)" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <button class="login-btn" onclick="doSetup()">Criar administrador</button>
-      <div class="login-err" id="setupErr"></div>
-    </div>
-
-    <!-- PASSO 1: Login -->
-    <div class="login-step act" id="stepLogin">
-      <input class="login-field" id="loginEmail" type="email" placeholder="Email" autocomplete="email" style="margin-bottom:10px"
-        onkeydown="if(event.keyCode===13)document.getElementById('loginPwd').focus()">
-      <div class="pwd-wrap">
-        <input class="login-field" id="loginPwd" type="password" placeholder="Senha" autocomplete="current-password"
-          onkeydown="if(event.keyCode===13)doLogin()">
-        <button type="button" class="pwd-eye" onclick="togglePwd('loginPwd',this)" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <button class="login-btn" onclick="doLogin()">Entrar</button>
-      <div class="login-err" id="loginErr"></div>
-    </div>
-
-    <!-- PASSO 2: Criar nova senha (primeiro acesso) -->
-    <div class="login-step" id="stepNewPwd">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:16px;text-align:left;background:var(--blue-lt);padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--blue)">
-        Primeiro acesso detectado. Crie uma nova senha para continuar.
-      </div>
-      <div class="pwd-wrap">
-        <input class="login-field" id="newPwd1" type="password" placeholder="Nova senha"
-          onkeydown="if(event.keyCode===13)document.getElementById('newPwd2').focus()">
-        <button type="button" class="pwd-eye" onclick="togglePwd('newPwd1',this)" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <div class="pwd-wrap">
-        <input class="login-field" id="newPwd2" type="password" placeholder="Confirmar nova senha"
-          onkeydown="if(event.keyCode===13)doSetNewPwd()">
-        <button type="button" class="pwd-eye" onclick="togglePwd('newPwd2',this)" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <button class="login-btn" onclick="doSetNewPwd()">Salvar nova senha</button>
-      <div class="login-err" id="newPwdErr"></div>
-    </div>
-  </div>
-</div>
-
-<div id="app" style="display:none">
+<div id="app">
   <nav id="sidebar">
     <div class="sb-logo">
       <div class="sb-mark" id="sbMark" style="background:var(--co)">V</div>
@@ -888,14 +800,7 @@ body.pres #app{margin-top:34px}
           <div><div class="pt">Configurações</div><div class="ps">Dados da empresa e tipos de recebimento</div></div>
         </div>
 
-        <!-- USUÁRIOS -->
-        <div class="panel mb14">
-          <div class="ph2" style="padding-bottom:11px">
-            <span class="pt2">Usuários</span>
-            <button class="btn btn-p btn-sm" onclick="openAddUser()">+ Novo usuário</button>
-          </div>
-          <div id="userList" style="padding:0 0 4px"></div>
-        </div>
+
 
         <!-- DADOS DA EMPRESA -->
         <div class="panel mb14">
@@ -1074,24 +979,6 @@ body.pres #app{margin-top:34px}
 <div class="mf"><button class="btn btn-g" onclick="cMo('mSvc')">Cancelar</button><button class="btn btn-p" onclick="saveSvc()">Salvar</button></div>
 </div></div>
 
-<!-- MODAL ADICIONAR USUÁRIO -->
-<div class="ov" id="mAddUser"><div class="modal"><div class="mh"><div class="mt">Novo Usuário</div><button class="mx" onclick="cMo('mAddUser')">✕</button></div>
-<div class="mb">
-  <div class="ff mb14"><label class="fl">Email *</label><input class="fi" id="newUserEmail" type="email" placeholder="email@exemplo.com"></div>
-  <div class="ff mb14"><label class="fl">Senha temporária *</label><input class="fi" id="newUserPwd" type="text" placeholder="Min. 4 caracteres">
-    <div style="font-size:9.5px;color:var(--t4);margin-top:3px">O usuário será obrigado a criar uma nova senha no primeiro acesso</div>
-  </div>
-  <div class="ff"><label class="fl">Perfil *</label>
-    <select class="fsel" id="newUserRole">
-      <option value="financeiro">💼 Financeiro — acesso total</option>
-      <option value="visualizador" selected>👁 Visualizador — somente leitura</option>
-    </select>
-  </div>
-  <div class="login-err" id="addUserErr"></div>
-</div>
-<div class="mf"><button class="btn btn-g" onclick="cMo('mAddUser')">Cancelar</button><button class="btn btn-p" onclick="saveNewUser()">Criar usuário</button></div>
-</div></div>
-
 <!-- MODAL TCV -->
 <div class="ov" id="mTcv"><div class="modal ml"><div class="mh"><div class="mt" id="mTcvTtl">Novo Registro</div><button class="mx" onclick="cMo('mTcv')">✕</button></div>
 <div class="mb" id="mTcvBody"></div>
@@ -1212,52 +1099,16 @@ async function init(){
   updMo();
   CACHE._loaded = true;
   initCashflowAno();
-
-  // Inicializar UI do login
-  var loginEl=document.getElementById('loginScreen');
-  var loginLogo=document.getElementById('loginLogo');
-  var loginTtl=document.getElementById('loginTtl');
-  if(loginLogo) loginLogo.textContent=(CFG.name||'V').charAt(0).toUpperCase();
-  if(loginTtl) loginTtl.textContent=CFG.name||'Valoriza';
-
-  // ── SEGURANÇA: manter login visível até autenticar ──────────────
-  if(loginEl) loginEl.style.display='flex';
-
-  // Verificar sessão ativa primeiro (sem bater no Sheets)
-  if(checkSession()){
-    // Sessão válida — mostrar app e carregar dados
-    if(loginEl) loginEl.style.display='none';
-    document.getElementById('app').style.display='flex';
-    applyRoleUI();
-    restorePage();
-    renderCurrentPage();
-    setSyncPill('busy','Atualizando…');
-    try{ await pullFromSheets(); renderCurrentPage(); }
-    catch(e){ setSyncPill('err','Sem conexão'); }
-    return;
-  }
-
-  // Sem sessão — puxar Sheets só para verificar usuários (sem mostrar dados)
-  setSyncPill('busy','Verificando…');
+  restorePage();
+  renderCurrentPage();
+  setSyncPill('busy', hasCached?'Atualizando…':'Carregando…');
   try{
     await pullFromSheets();
+    renderCurrentPage();
   } catch(e){
     setSyncPill('err','Sem conexão');
+    if(!hasCached) toast('Sem conexão com o Sheets.','warn');
   }
-
-  // Corrigir admin mal-formado (firstAccess:true no único admin)
-  fixAdminFirstAccess();
-
-  // Mostrar tela correta de login
-  var users=getUsers();
-  if(!users.length){
-    document.getElementById('loginSub').textContent='Configure o administrador do sistema';
-    showStep('stepSetup');
-  } else {
-    document.getElementById('loginSub').textContent='Entre com seu email e senha';
-    showStep('stepLogin');
-  }
-  // Login permanece visível — dados NÃO são renderizados ainda
 }
 
 
@@ -1376,6 +1227,13 @@ function queueWrite(sheet, rows){
   clearTimeout(writeTimer);
   writeTimer = setTimeout(flushWriteQueue, 2000);
 }
+function fixYm(raw){
+  if(!raw) return null;
+  var s=fixDateStr(String(raw).trim());
+  if(!s) return null;
+  return s.slice(0,7);
+}
+
 function fixDateStr(v){
   // Converte qualquer formato de data para string simples
   if(!v) return '';
@@ -3518,8 +3376,6 @@ function renderSettings(){
   const curColor=get('color')||CFG.color||'#2563EB';
   document.querySelectorAll('.cfg-cdot').forEach(d=>{d.classList.toggle('sel',d.dataset.c===curColor);});
   document.getElementById('btnSaveCfg').style.display='none';
-  // Usuários
-  renderUserList();
   // Tipos
   const types=getTypes();
   document.getElementById('typList').innerHTML=types.length?
@@ -4307,270 +4163,7 @@ function renderCashflowCerberus(){
 // ── FIM CASHFLOW CERBERUS ──────────────────────────────────────────
 
 
-// ── SISTEMA DE LOGIN ──────────────────────────────────────────────────
-var _userRole = null; // 'financeiro' | 'visualizador' | null
-var _loginEmail = null; // email do usuário logado
 
-// ── GESTÃO DE USUÁRIOS ────────────────────────────────────────────────
-function getUsers(){
-  try{
-    var raw=CACHE.settings['__users__']||'[]';
-    var parsed=JSON.parse(raw);
-    return Array.isArray(parsed)?parsed:[];
-  }catch(e){ return []; }
-}
-function saveUsers(users){
-  var v=JSON.stringify(users);
-  CACHE.settings['__users__']=v;
-  saveLocalCache();
-  // Salvar imediatamente no Sheets sem debounce
-  try{
-    api({action:'batchWrite',sheet:'settings',rows:[{key:'__users__',value:v}]});
-  }catch(e){}
-  queueWrite('settings',[{key:'__users__',value:v}]);
-}
-function togglePwd(inputId, btn){
-  var inp=document.getElementById(inputId);
-  if(!inp) return;
-  var show=inp.type==='password';
-  inp.type=show?'text':'password';
-  // Trocar ícone: olho aberto / olho fechado
-  btn.innerHTML=show
-    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  btn.style.color=show?'var(--co)':'var(--t4)';
-}
-
-function hashSimple(str){
-  var h=0;
-  for(var i=0;i<str.length;i++){
-    h=((h<<5)-h)+str.charCodeAt(i);
-    h|=0;
-  }
-  return String(h);
-}
-
-function doSetup(){
-  var email=(document.getElementById('setupEmail').value||'').trim().toLowerCase();
-  var p1=document.getElementById('setupPwd1').value||'';
-  var p2=document.getElementById('setupPwd2').value||'';
-  var err=document.getElementById('setupErr');
-  err.textContent='';
-  if(!email||!email.includes('@')){ err.textContent='Email inválido.'; return; }
-  if(p1.length<4){ err.textContent='Senha deve ter ao menos 4 caracteres.'; return; }
-  if(p1!==p2){ err.textContent='As senhas não coincidem.'; return; }
-  // Criar o primeiro administrador — firstAccess SEMPRE false no setup
-  var adminUser={email:email,pwdHash:hashSimple(p1),role:'financeiro',firstAccess:false};
-  // Limpar qualquer usuário anterior mal-formado e criar do zero
-  saveUsers([adminUser]);
-  _userRole='financeiro'; _loginEmail=email;
-  loginSuccess();
-  toast('Administrador criado com sucesso!');
-}
-
-// Corrigir usuário existente com firstAccess:true que seja o único admin
-function fixAdminFirstAccess(){
-  var users=getUsers();
-  if(users.length===1 && users[0].firstAccess && users[0].role==='financeiro'){
-    // Único usuário, financeiro, ainda marcado como primeiro acesso — corrigir
-    users[0].firstAccess=false;
-    saveUsers(users);
-  }
-}
-
-// ── TELA DE LOGIN ─────────────────────────────────────────────────────
-function showStep(step){
-  document.querySelectorAll('.login-step').forEach(function(el){
-    el.classList.toggle('act', el.id===step);
-  });
-}
-
-function doLogin(){
-  var email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
-  var pwd=document.getElementById('loginPwd').value||'';
-  var err=document.getElementById('loginErr');
-  err.textContent='';
-
-  if(!email||!pwd){ err.textContent='Preencha email e senha.'; return; }
-
-  var users=getUsers();
-
-  // Se não tem usuários — bloquear login e mostrar setup
-  if(!users.length){
-    err.textContent='Nenhum usuário configurado. Configure o administrador primeiro.';
-    return;
-  }
-
-  var user=users.find(function(u){ return u.email===email; });
-  if(!user){ err.textContent='Email não encontrado.'; return; }
-
-  if(hashSimple(pwd)===user.pwdHash){
-    if(user.firstAccess){
-      // Primeiro acesso — pedir nova senha
-      _loginEmail=email;
-      document.getElementById('loginSub').textContent='Crie sua nova senha';
-      showStep('stepNewPwd');
-    } else {
-      _userRole=user.role; _loginEmail=email;
-      loginSuccess();
-    }
-  } else {
-    err.textContent='Senha incorreta.';
-    document.getElementById('loginPwd').value='';
-  }
-}
-
-function doSetNewPwd(){
-  var p1=document.getElementById('newPwd1').value||'';
-  var p2=document.getElementById('newPwd2').value||'';
-  var err=document.getElementById('newPwdErr');
-  err.textContent='';
-  if(p1.length<4){ err.textContent='Senha deve ter ao menos 4 caracteres.'; return; }
-  if(p1!==p2){ err.textContent='As senhas não coincidem.'; return; }
-
-  var users=getUsers();
-  var user=users.find(function(u){ return u.email===_loginEmail; });
-  if(!user){ err.textContent='Erro ao salvar. Tente novamente.'; return; }
-  user.pwdHash=hashSimple(p1);
-  user.firstAccess=false;
-  saveUsers(users);
-  _userRole=user.role;
-  // Voltar para login com mensagem de sucesso
-  document.getElementById('loginSub').textContent='Entre com seu email e senha';
-  document.getElementById('newPwd1').value='';
-  document.getElementById('newPwd2').value='';
-  showStep('stepLogin');
-  document.getElementById('loginPwd').value='';
-  document.getElementById('loginErr').textContent='';
-  toast('Senha criada! Faça login com a nova senha.');
-}
-
-function loginSuccess(){
-  try{ sessionStorage.setItem('vz_role_'+LS_KEY, _userRole);
-       sessionStorage.setItem('vz_email_'+LS_KEY, _loginEmail||''); }catch(e){}
-  document.getElementById('loginScreen').style.display='none';
-  // Mostrar #app SOMENTE após autenticar
-  document.getElementById('app').style.display='flex';
-  applyRoleUI();
-  restorePage();
-  renderCurrentPage();
-  setSyncPill('ok','Autenticado');
-  toast('Bem-vindo'+((_loginEmail)?' '+_loginEmail.split('@')[0]:'')+'! Perfil: '+(_userRole==='financeiro'?'Financeiro':'Visualizador'));
-}
-
-function applyRoleUI(){
-  var isViewer=_userRole==='visualizador';
-  document.querySelectorAll('.pres-hide,.bico,.btn-p,.btn-o').forEach(function(el){
-    el.style.visibility=isViewer?'hidden':'';
-  });
-  if(isViewer){
-    document.querySelectorAll('input:not(.cmp-sel),textarea').forEach(function(el){
-      el.setAttribute('readonly',''); el.style.pointerEvents='none';
-    });
-    document.querySelectorAll('.ni').forEach(function(ni){
-      var lbl=ni.querySelector('.ni-lbl');
-      if(lbl&&(lbl.textContent.includes('Importar')||lbl.textContent.includes('Configurações'))){
-        ni.style.display='none';
-      }
-    });
-  }
-}
-
-function checkSession(){
-  try{
-    var role=sessionStorage.getItem('vz_role_'+LS_KEY);
-    var email=sessionStorage.getItem('vz_email_'+LS_KEY);
-    if(role){ _userRole=role; _loginEmail=email||null; return true; }
-  }catch(e){}
-  return false;
-}
-
-// ── GESTÃO DE USUÁRIOS NAS CONFIGURAÇÕES ─────────────────────────────
-function renderUserList(){
-  var el=document.getElementById('userList');
-  if(!el) return;
-  var users=getUsers();
-  if(!users.length){
-    el.innerHTML='<div style="padding:12px;font-size:12px;color:var(--t4);text-align:center">Nenhum usuário cadastrado</div>';
-    return;
-  }
-  el.innerHTML='<table style="width:100%;border-collapse:collapse">'+
-    '<thead><tr>'+
-    '<th style="text-align:left;padding:7px 10px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--border)">Email</th>'+
-    '<th style="text-align:left;padding:7px 10px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--border)">Perfil</th>'+
-    '<th style="text-align:left;padding:7px 10px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--border)">Status</th>'+
-    '<th style="width:80px;border-bottom:1px solid var(--border)"></th>'+
-    '</tr></thead><tbody>'+
-    users.map(function(u,i){
-      var roleLbl=u.role==='financeiro'?'Financeiro':'Visualizador';
-      var roleColor=u.role==='financeiro'?'var(--blue)':'var(--amber)';
-      var status=u.firstAccess?'Aguardando 1º acesso':'Ativo';
-      var statusColor=u.firstAccess?'var(--amber)':'var(--green)';
-      return '<tr style="border-bottom:1px solid var(--border)">'+
-        '<td style="padding:8px 10px;font-size:12px">'+u.email+'</td>'+
-        '<td style="padding:8px 10px"><span style="font-size:10.5px;font-weight:600;color:'+roleColor+'">'+roleLbl+'</span></td>'+
-        '<td style="padding:8px 10px"><span style="font-size:10.5px;color:'+statusColor+'">'+status+'</span></td>'+
-        '<td style="padding:8px 10px;text-align:right">'+
-          '<button class="bico" onclick="resetUserPwd('+i+')" title="Resetar senha" style="margin-right:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></button>'+
-          '<button class="bico" onclick="delUser('+i+')">'+TSVG+'</button>'+
-        '</td>'+
-      '</tr>';
-    }).join('')+
-    '</tbody></table>';
-}
-
-function openAddUser(){
-  document.getElementById('newUserEmail').value='';
-  document.getElementById('newUserPwd').value='';
-  document.getElementById('newUserRole').value='visualizador';
-  document.getElementById('addUserErr').textContent='';
-  oMo('mAddUser');
-}
-
-function saveNewUser(){
-  var email=(document.getElementById('newUserEmail').value||'').trim().toLowerCase();
-  var pwd=document.getElementById('newUserPwd').value||'';
-  var role=document.getElementById('newUserRole').value;
-  var err=document.getElementById('addUserErr');
-  err.textContent='';
-  if(!email||!email.includes('@')){ err.textContent='Email inválido.'; return; }
-  if(pwd.length<4){ err.textContent='Senha deve ter ao menos 4 caracteres.'; return; }
-  var users=getUsers();
-  if(users.find(function(u){return u.email===email;})){ err.textContent='Email já cadastrado.'; return; }
-  users.push({email:email,pwdHash:hashSimple(pwd),role:role,firstAccess:true});
-  saveUsers(users);
-  cMo('mAddUser');
-  renderUserList();
-  toast('Usuário criado! Compartilhe o email e a senha temporária com ele.');
-}
-
-function resetUserPwd(idx){
-  var users=getUsers();
-  var u=users[idx];
-  if(!u) return;
-  confDel('Resetar senha de '+u.email+'? Ele precisará criar uma nova senha no próximo acesso.',function(){
-    u.pwdHash=hashSimple('temp1234');
-    u.firstAccess=true;
-    saveUsers(users);
-    renderUserList();
-    toast('Senha resetada para temp1234. Informe ao usuário.');
-  });
-}
-
-function delUser(idx){
-  var users=getUsers();
-  var u=users[idx];
-  if(!u) return;
-  confDel('Excluir usuário '+u.email+'?',function(){
-    users.splice(idx,1);
-    saveUsers(users);
-    renderUserList();
-    toast('Usuário removido.','info');
-  });
-}
-
-function savePwds(){ /* mantido por compatibilidade */ }
-// ── FIM LOGIN ─────────────────────────────────────────────────────────
 
 // ── ARRANQUE ──────────────────────────────────────────────────────
 init();
