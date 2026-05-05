@@ -697,14 +697,15 @@ body.pres #app{margin-top:34px}
             <button class="btn btn-p btn-sm pres-hide" onclick="openRevMo()">+ Adicionar</button>
           </div>
         </div>
-        <div class="mgrid" id="rMet" style="grid-template-columns:repeat(3,1fr)"></div>
+        <div class="mgrid" id="rMet" style="grid-template-columns:repeat(4,1fr)"></div>
         <div class="panel">
           <div class="ph2"><span class="pt2">Lançamentos</span><span id="rCnt" style="font-size:10px;color:var(--t3)"></span></div>
           <div class="tw"><table><thead><tr>
-            <th onclick="sortT('revenues','client')">Cliente</th>
-            <th onclick="sortT('revenues','date')">Data</th>
-            <th onclick="sortT('revenues','value')">Valor</th>
-            <th>Tipo</th><th style="width:36px"></th>
+            <th onclick="sortT('revenues','client')" style="cursor:pointer">Cliente ↕</th>
+            <th onclick="sortT('revenues','date')" style="cursor:pointer">Data ↕</th>
+            <th onclick="sortT('revenues','value')" style="cursor:pointer">Valor ↕</th>
+            <th onclick="sortT('revenues','type')" style="cursor:pointer">Tipo ↕</th>
+            <th style="width:36px"></th>
           </tr></thead><tbody id="rBody"></tbody></table></div>
           <div id="rEmpty" class="empty" style="display:none"><div class="ei">↗</div><div class="et">Sem receitas neste período</div></div>
         </div>
@@ -1152,13 +1153,23 @@ body.pres #app{margin-top:34px}
             ← Voltar
           </button>
         </div>
+        <!-- KPIs por tipo (só visível em Recebido) -->
+        <div id="ma-rec-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+
+        <!-- Toolbar Recebido -->
+        <div id="ma-rec-toolbar" style="display:none;margin-bottom:12px;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px 12px;flex:1;max-width:300px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="ma-rec-search" type="text" placeholder="Buscar cliente..." style="border:none;outline:none;font-size:12.5px;background:transparent;width:100%" oninput="maRecRender()">
+          </div>
+        </div>
+
         <!-- Tabela de detalhe -->
-        <div class="card">
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
             <colgroup>
-              <col style="width:80px"><col><col style="width:105px">
-              <col style="width:85px"><col style="width:120px"><col style="width:160px">
-              <col style="width:160px"><col style="width:80px">
+              <col style="width:36px"><col><col style="width:110px">
+              <col style="width:130px"><col style="width:120px"><col style="width:170px">
             </colgroup>
             <thead id="ma-det-head"></thead>
             <tbody id="ma-det-list"></tbody>
@@ -1458,7 +1469,7 @@ async function pullFromSheets(){
   CACHE.paid        = (data.paid       ||[]).map(maNormRow);
   CACHE.payables    = (data.payables   ||[]).map(maNormRow);
   // Sincronizar MA com CACHE (sempre — igual ao padrão)
-  MA.received    = CACHE.received;
+  MA.received    = maRecAplicarMemoria ? maRecAplicarMemoria(CACHE.received)    : CACHE.received;
   MA.receivables = CACHE.receivables;
   MA.paid        = CACHE.paid;
   MA.payables    = CACHE.payables;
@@ -2018,7 +2029,7 @@ function renderCurrentPage(){ PAGE_RENDERS[curPage]?.(); }
 const S = (function(){
   // Sempre iniciar no mês anterior ao atual
   var prev=new Date(); prev.setDate(1); prev.setMonth(prev.getMonth()-1);
-  return { month:prev, charts:{}, sort:{}, eView:'hier', openSubs:new Set() };
+  return { month:prev, charts:{}, sort:{}, eView:'hier', openSubs:new Set(), rvExp:{} };
 })();
 function updMo(){ document.getElementById('moLbl').textContent=fmtYM(ymOf(S.month)).toUpperCase(); }
 function chMo(d){ const nd=new Date(S.month); nd.setMonth(nd.getMonth()+d); S.month=nd; updMo(); renderCurrentPage(); }
@@ -2170,7 +2181,7 @@ function renderDash(){
   document.getElementById('dMetrics').innerHTML=`
     <div class="mc"><div class="mc-bar" style="background:var(--green)"></div><div class="mc-tag">Receita Total</div><div class="mc-val">${R$(cur.tv)}</div>${dH(cur.tv,prv.tv)}</div>
     <div class="mc"><div class="mc-bar" style="background:var(--red)"></div><div class="mc-tag">Desp. Operacionais</div><div class="mc-val">${R$(cur.te)}</div>${dH(cur.te,prv.te,true)}</div>
-    <div class="mc"><div class="mc-bar" style="background:${cur.opR>=0?'var(--green)':'var(--red)'}"></div><div class="mc-tag">Resultado Op.</div><div class="mc-val" style="color:${cur.opR>=0?'var(--green)':'var(--red)'}">${R$(cur.opR)}</div>${dH(cur.opR,prv.opR)}</div>
+    <div class="mc"><div class="mc-bar" style="background:${cur.opR>=0?'var(--green)':'var(--red)'}"></div><div class="mc-tag">Resultado Op.</div><div class="mc-val" style="color:${cur.opR>=0?'var(--green)':'var(--red)'}">${R$(cur.opR)}</div><div class="mc-d" style="margin-top:4px"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:${cur.opR>=0?'var(--green-lt)':'var(--red-lt)'};color:${cur.opR>=0?'var(--green)':'var(--red)'}">Margem: ${cur.tv>0?((cur.opR/cur.tv)*100).toFixed(1)+'%':'—'}</span></div>${dH(cur.opR,prv.opR)}</div>
     <div class="mc" style="cursor:pointer" onclick="nav('balance')"><div class="mc-bar" style="background:var(--teal)"></div><div class="mc-tag">Saldo Bancário</div><div class="mc-val" style="color:${bCur===null?'var(--t4)':bCur>=0?'var(--teal)':'var(--red)'}">${bCur!==null?R$(bCur):'—'}</div>${bDelta}</div>`;
 
   initHistSelects();
@@ -2553,29 +2564,312 @@ function setRvTp(id,v){
   }
 }
 
+// ── Helpers para grupos de lançamentos ──────────────────────────
+function rvSetTipo(sel){
+  var id=sel.dataset.rvid;
+  setRvTp(id, sel.value);
+  renderRevs();
+}
+function rvSetTipoGrupo(sel){
+  var ids=(sel.dataset.rvids||'').split(',').filter(Boolean);
+  var tipo=sel.value;
+  ids.forEach(function(id){ setRvTp(id, tipo); });
+  renderRevs();
+}
+function rvTcvMeses(inp){
+  var id=inp.dataset.rvid;
+  setTcvMonths(id, parseInt(inp.value)||1);
+}
+function rvTcvMesesGrupo(inp){
+  var ids=(inp.dataset.rvids||'').split(',').filter(Boolean);
+  var m=parseInt(inp.value)||1;
+  ids.forEach(function(id){ setTcvMonths(id, m); });
+}
+function rvChaveEncode(chave){
+  return chave.replace(/[^a-zA-Z0-9]/g,function(c){return '_'+c.charCodeAt(0)+'_';});
+}
+function rvChaveDecode(seg){
+  return seg.replace(/_(\d+)_/g,function(_,code){return String.fromCharCode(parseInt(code));});
+}
+function rvToggleBtn(btn){
+  var seg=btn.dataset.chave;
+  var chave=rvChaveDecode(seg);
+  if(S.rvExp[chave]) delete S.rvExp[chave];
+  else S.rvExp[chave]=true;
+  renderRevs();
+}
+function rvToggle(btn){ rvToggleBtn(btn); }
+function rvDel(btn){
+  var id=btn.dataset.rvid;
+  delRv(id);
+}
+function rvDelGrupo(btn){
+  var ids=(btn.dataset.rvids||'').split(',').filter(Boolean);
+  if(!ids.length) return;
+  if(!confirm('Excluir '+ids.length+' lançamento'+(ids.length>1?'s':'')+' de "'+btn.closest('tr').querySelector('td').textContent.trim()+'"?')) return;
+  ids.forEach(function(id){ delRv(id); });
+}
+
+// ── Memória de meses TCV ──────────────────────────────────────────
+function getTcvMonths(){
+  try{
+    var raw=CACHE.settings['__tcv_months__'];
+    if(!raw||raw==='0'||raw==='null'||raw==='undefined') return {};
+    var parsed=JSON.parse(raw);
+    // Garantir que é um objeto (não número, string, etc)
+    if(typeof parsed!=='object'||Array.isArray(parsed)||parsed===null) return {};
+    return parsed;
+  }catch(e){ return {}; }
+}
+function setTcvMonths(id, m){
+  var mem=getTcvMonths();
+  if(m>0) mem[id]=m; else delete mem[id];
+  var json=JSON.stringify(mem);
+  CACHE.settings['__tcv_months__']=json;
+  saveLocalCache();
+  // Persistir no Sheets
+  queueWrite('settings',[{key:'__tcv_months__',value:json}]);
+  // Atualizar KPIs com o YM corrente da tela de Receitas
+  // Buscar o ym a partir do lançamento que foi alterado
+  var ym=ymOf(S.month);
+  // Verificar em qual mês está este lançamento
+  var allRevs=Object.entries(CACHE.revenues||{});
+  for(var i=0;i<allRevs.length;i++){
+    var found=allRevs[i][1].find(function(r){return r.id===id;});
+    if(found){ym=allRevs[i][0];break;}
+  }
+  rvAtualizarKpis(ym);
+}
+
+function rvAtualizarKpis(ymParam){
+  // Recalcula e atualiza só o bloco de KPIs sem recriar a tabela
+  // Usar ymParam se fornecido, senão usar S.month
+  var ym=ymParam||ymOf(S.month);
+  var rv=[...getRvs(ym)];
+  var tcvMem=getTcvMonths();
+  var tot=rv.reduce(function(s,r){return s+(+r.value||0);},0);
+
+  var recRv=rv.filter(function(r){return r.type==='recurrent';});
+  var recTot=recRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var recCli=new Set(recRv.map(function(r){return r.client;})).size;
+  var recTkm=recCli>0?recTot/recCli:0;
+
+  var tcvRv=rv.filter(function(r){return r.type==='tcv';});
+  var tcvTot=tcvRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var tcvCliSet={};
+  var tcvSomaTickets=0;
+
+  tcvRv.forEach(function(r){
+    var m=tcvMem[r.id]||1;
+    var ticket=(+r.value||0)/m;
+    tcvSomaTickets+=ticket;
+    tcvCliSet[r.client]=true;
+
+  });
+  var tcvCli=Object.keys(tcvCliSet).length;
+  var tcvTkm=tcvCli>0?tcvSomaTickets/tcvCli:0;
+
+
+  var fineRv=rv.filter(function(r){return r.type==='fine';});
+  var fineTot=fineRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var fineCli=new Set(fineRv.map(function(r){return r.client;})).size;
+
+  var rMet=document.getElementById('rMet');
+  if(!rMet) return;
+  rMet.style.gridTemplateColumns='repeat(4,1fr)';
+  rMet.innerHTML=
+    '<div class="mc"><div class="mc-bar" style="background:var(--green)"></div>'+
+      '<div class="mc-tag">Total Receitas</div>'+
+      '<div class="mc-val">'+R$(tot)+'</div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:var(--co)"></div>'+
+      '<div class="mc-tag">Recorrente</div>'+
+      '<div class="mc-val" style="color:var(--co)">'+R$(recTot)+'</div>'+
+      '<div class="mc-d"><span>'+recCli+' cliente'+(recCli!==1?'s':'')+'</span>'+
+        '<span style="margin-left:8px;color:var(--t3)">TM: '+R$(recTkm)+'</span></div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:#2563EB"></div>'+
+      '<div class="mc-tag">TCV</div>'+
+      '<div class="mc-val" style="color:#2563EB">'+R$(tcvTot)+'</div>'+
+      '<div class="mc-d"><span>'+tcvCli+' cliente'+(tcvCli!==1?'s':'')+'</span>'+
+        '<span style="margin-left:8px;color:var(--t3)">TM: '+R$(tcvTkm)+'</span></div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:var(--red)"></div>'+
+      '<div class="mc-tag">Multa</div>'+
+      '<div class="mc-val" style="color:var(--red)">'+R$(fineTot)+'</div>'+
+      '<div class="mc-d"><span>'+fineCli+' cliente'+(fineCli!==1?'s':'')+'</span></div>'+
+    '</div>';
+}
+
 function renderRevs(){
   if(!CACHE._loaded)return;
   const ym=ymOf(S.month);
   let rv=[...getRvs(ym)];
   const sc=S.sort.revenues;
-  if(sc)rv.sort((a,b)=>{let va=a[sc.key],vb=b[sc.key];if(sc.key==='value'){va=+va;vb=+vb;}return sc.dir==='asc'?(va<vb?-1:va>vb?1:0):(va<vb?1:va>vb?-1:0);});
+  if(sc)rv.sort((a,b)=>{
+    let va=a[sc.key],vb=b[sc.key];
+    if(sc.key==='value'){va=+va;vb=+vb;}
+    return sc.dir==='asc'?(va<vb?-1:va>vb?1:0):(va<vb?1:va>vb?-1:0);
+  });
   const tot=rv.reduce((s,r)=>s+(+r.value||0),0);
   document.getElementById('rSub').textContent=fmtYM(ym);
-  document.getElementById('rMet').innerHTML=`
-    <div class="mc"><div class="mc-bar" style="background:var(--green)"></div><div class="mc-tag">Total Receitas</div><div class="mc-val">${R$(tot)}</div></div>
-    <div class="mc"><div class="mc-bar" style="background:var(--blue)"></div><div class="mc-tag">Clientes</div><div class="mc-val">${new Set(rv.map(r=>r.client)).size}</div></div>
-    <div class="mc"><div class="mc-bar" style="background:var(--purple)"></div><div class="mc-tag">Ticket Médio</div><div class="mc-val">${rv.length?R$(tot/rv.length):R$(0)}</div></div>`;
-  document.getElementById('rCnt').textContent=`${rv.length} lançamentos`;
+  document.getElementById('rCnt').textContent=rv.length+' lançamentos';
+
+  // ── KPIs ──────────────────────────────────────────────────────
+  var tcvMem=getTcvMonths();
+
+  // Recorrente
+  var recRv=rv.filter(function(r){return r.type==='recurrent';});
+  var recTot=recRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var recCli=new Set(recRv.map(function(r){return r.client;})).size;
+  var recTkm=recCli>0?recTot/recCli:0;
+
+  // TCV — cada lançamento tem seu ticket individual (valor ÷ meses)
+  // Ticket Médio = soma de todos os tickets ÷ nº de clientes únicos
+  var tcvRv=rv.filter(function(r){return r.type==='tcv';});
+  var tcvTot=tcvRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var tcvCliSet={};
+  var tcvSomaTickets=0;
+  tcvRv.forEach(function(r){
+    var m=tcvMem[r.id]||1;
+    var ticket=(+r.value||0)/m;   // ticket individual: valor ÷ meses
+    tcvSomaTickets+=ticket;
+    tcvCliSet[r.client]=true;
+  });
+  var tcvCli=Object.keys(tcvCliSet).length;
+  // TM = soma dos tickets individuais ÷ clientes únicos
+  var tcvTkm=tcvCli>0?tcvSomaTickets/tcvCli:0;
+
+  // Multa
+  var fineRv=rv.filter(function(r){return r.type==='fine';});
+  var fineTot=fineRv.reduce(function(s,r){return s+(+r.value||0);},0);
+  var fineCli=new Set(fineRv.map(function(r){return r.client;})).size;
+
+  document.getElementById('rMet').style.gridTemplateColumns='repeat(4,1fr)';
+  document.getElementById('rMet').innerHTML=
+    '<div class="mc"><div class="mc-bar" style="background:var(--green)"></div>'+
+      '<div class="mc-tag">Total Receitas</div>'+
+      '<div class="mc-val">'+R$(tot)+'</div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:var(--co)"></div>'+
+      '<div class="mc-tag">Recorrente</div>'+
+      '<div class="mc-val" style="color:var(--co)">'+R$(recTot)+'</div>'+
+      '<div class="mc-d"><span>'+recCli+' cliente'+(recCli!==1?'s':'')+'</span>'+
+        '<span style="margin-left:8px;color:var(--t3)">TM: '+R$(recTkm)+'</span></div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:#2563EB"></div>'+
+      '<div class="mc-tag">TCV</div>'+
+      '<div class="mc-val" style="color:#2563EB">'+R$(tcvTot)+'</div>'+
+      '<div class="mc-d"><span>'+tcvCli+' cliente'+(tcvCli!==1?'s':'')+'</span>'+
+        '<span style="margin-left:8px;color:var(--t3)">TM: '+R$(tcvTkm)+'</span></div>'+
+    '</div>'+
+    '<div class="mc"><div class="mc-bar" style="background:var(--red)"></div>'+
+      '<div class="mc-tag">Multa</div>'+
+      '<div class="mc-val" style="color:var(--red)">'+R$(fineTot)+'</div>'+
+      '<div class="mc-d"><span>'+fineCli+' cliente'+(fineCli!==1?'s':'')+'</span></div>'+
+    '</div>';
+
   const body=document.getElementById('rBody'),empty=document.getElementById('rEmpty');
   if(!rv.length){body.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  body.innerHTML=rv.map(r=>`<tr>
-    <td>${r.client}</td>
-    <td class="mono dim">${fmtDt(r.date)}</td>
-    <td class="mono">${R$(+r.value)}</td>
-    <td><select class="is" onchange="setRvTp('${r.id}',this.value)">${getTypes().map(t=>`<option value="${t.id}" ${r.type===t.id?'selected':''}>${t.label}</option>`).join('')}</select></td>
-    <td><button class="bico pres-hide" onclick="delRv('${r.id}')">${TSVG}</button></td>
-  </tr>`).join('');
+
+  // ── Tabela — agrupar mesmo cliente + tipo, com expansão ─────
+  var rvGrupos=[], rvGrupoMap={};
+  rv.forEach(function(r){
+    var chave=r.client+'|||'+r.type;
+    if(!rvGrupoMap[chave]){
+      rvGrupoMap[chave]={
+        chave:chave, client:r.client, type:r.type,
+        date:r.date, valor:0, ids:[], itens:[], meses:getTcvMonths()[r.id]||1
+      };
+      rvGrupos.push(rvGrupoMap[chave]);
+    }
+    rvGrupoMap[chave].valor+=(+r.value||0);
+    rvGrupoMap[chave].ids.push(r.id);
+    rvGrupoMap[chave].itens.push(r);
+    if(r.type==='tcv'){
+      var m=getTcvMonths()[r.id]||1;
+      if(m>rvGrupoMap[chave].meses) rvGrupoMap[chave].meses=m;
+    }
+  });
+
+  var rows='';
+  rvGrupos.forEach(function(g){
+    var isTcv=g.type==='tcv';
+    var multi=g.ids.length>1;
+    var exp=!!S.rvExp[g.chave];
+
+    // Select de tipo para o grupo
+    var tipoSel=getTypes().map(function(t){
+      return '<option value="'+t.id+'"'+(g.type===t.id?' selected':'')+'>'+t.label+'</option>';
+    }).join('');
+
+    // Campo de meses TCV (grupo)
+    var tcvGrupo=isTcv?
+      '<input type="number" min="1" max="120" value="'+g.meses+'" '+
+        'data-rvids="'+g.ids.join(',')+'" class="rv-tcv-m" '+
+        'style="width:48px;margin-left:6px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;font-family:var(--mono);text-align:center;outline:none" '+
+        'onchange="rvTcvMesesGrupo(this)" onclick="event.stopPropagation()">'+
+      '<span style="font-size:10px;color:var(--t3);margin-left:3px">m</span>'
+      :'';
+
+    // Seta de expansão (só se multi)
+    // Chave segura: substituir chars que quebram HTML
+    var chaveSegura=g.chave.replace(/[^a-zA-Z0-9]/g,function(c){return '_'+c.charCodeAt(0)+'_';});
+    var seta=multi?
+      '<button data-chave="'+chaveSegura+'" onclick="rvToggleBtn(this)" '+
+        'style="background:none;border:none;cursor:pointer;color:var(--co);font-size:14px;padding:0 4px;margin-right:2px;line-height:1;vertical-align:middle">'+
+        (exp?'&#9660;':'&#9654;')+
+      '</button>':'<span style="display:inline-block;width:22px"></span>';
+
+    var badge=multi?
+      '<span style="margin-left:6px;background:var(--bg);border:1px solid var(--border);border-radius:99px;font-size:10px;padding:1px 7px;color:var(--t3);font-weight:600">'+g.ids.length+'x</span>'
+      :'';
+
+    // Linha pai
+    rows+='<tr style="background:var(--bg)">'+
+      '<td>'+seta+g.client+badge+'</td>'+
+      '<td class="mono dim">'+fmtDt(g.date)+'</td>'+
+      '<td class="mono">'+R$(g.valor)+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<select class="is" data-rvids="'+g.ids.join(',')+'" onchange="rvSetTipoGrupo(this)">'+tipoSel+'</select>'+
+        tcvGrupo+
+      '</td>'+
+      '<td><button class="bico pres-hide" data-rvids="'+g.ids.join(',')+'" onclick="rvDelGrupo(this)">'+TSVG+'</button></td>'+
+    '</tr>';
+
+    // Linhas filhas (expandidas)
+    if(exp && multi){
+      g.itens.forEach(function(r){
+        var isTcvR=r.type==='tcv';
+        var mR=tcvMem[r.id]||1;
+        var tipoSelR=getTypes().map(function(t){
+          return '<option value="'+t.id+'"'+(r.type===t.id?' selected':'')+'>'+t.label+'</option>';
+        }).join('');
+        var tcvR=isTcvR?
+          '<input type="number" min="1" max="120" value="'+mR+'" '+
+            'data-rvid="'+r.id+'" class="rv-tcv-m" '+
+            'style="width:48px;margin-left:6px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;font-family:var(--mono);text-align:center;outline:none" '+
+            'onchange="rvTcvMeses(this)" onclick="event.stopPropagation()">'+
+          '<span style="font-size:10px;color:var(--t3);margin-left:3px">m</span>'
+          :'';
+        rows+='<tr style="background:#F8FAFF">'+
+          '<td style="padding-left:32px;color:var(--t3);font-size:12px">'+
+            '<span style="color:var(--t4);font-family:var(--mono);font-size:11px;margin-right:6px">↳ #'+r.id.slice(-4)+'</span>'+
+            r.client+
+          '</td>'+
+          '<td class="mono dim" style="font-size:11px">'+fmtDt(r.date)+'</td>'+
+          '<td class="mono" style="font-size:12px">'+R$(+r.value)+'</td>'+
+          '<td style="white-space:nowrap">'+
+            '<select class="is" data-rvid="'+r.id+'" onchange="rvSetTipo(this)">'+tipoSelR+'</select>'+
+            tcvR+
+          '</td>'+
+          '<td><button class="bico pres-hide" data-rvid="'+r.id+'" onclick="rvDel(this)">'+TSVG+'</button></td>'+
+        '</tr>';
+      });
+    }
+  });
+  body.innerHTML=rows;
 }
 
 // ── EXPENSES ──────────────────────────────────────────────────────
@@ -5390,6 +5684,8 @@ function maConfirmImport(){
   var result=_maPending,tipo=result.tipo,fname=result.fname;
   var existIds={};MA[tipo].filter(function(r){return r._f!==fname;}).forEach(function(r){existIds[r.id]=1;});
   var novosReais=result.novos.filter(function(r){return !existIds[r.id];});
+  // Aplicar memória de tipos para recebidos (tipo padrão = Mensalidade)
+  if(tipo==='received') novosReais=maRecAplicarMemoria(novosReais);
   MA[tipo]=MA[tipo].filter(function(r){return r._f!==fname;}).concat(novosReais);
   if(!MA.hist[tipo])MA.hist[tipo]=[];
   MA.hist[tipo].push({fname:fname,data:new Date().toLocaleDateString('pt-BR'),novos:novosReais.length,ts:Date.now()});
@@ -5438,6 +5734,13 @@ async function maEnviarSheets(tipo){
 var REGUA_OPTS=['Com a Valoriza','Valoriza + Operação','Valoriza + Gestor','Valoriza + Jurídico'];
 function maVerDetalhe(tipo){
   MA._detalhe=tipo;
+  // Esconder elementos exclusivos do Recebido
+  if(tipo!=='recebido'){
+    var kp=document.getElementById('ma-rec-kpis');
+    var tb=document.getElementById('ma-rec-toolbar');
+    if(kp)kp.style.display='none';
+    if(tb)tb.style.display='none';
+  }
   var mes=parseInt((document.getElementById('ma-mes')||{}).value)||new Date().getMonth()+1;
   var ano=parseInt((document.getElementById('ma-ano')||{}).value)||new Date().getFullYear();
   function dtMes(s){var dt=maPDT(s);return dt&&dt.getMonth()===mes-1&&dt.getFullYear()===ano;}
@@ -5458,10 +5761,28 @@ function maVerDetalhe(tipo){
   }else if(tipo==='recebido'){
     dados=MA.received.filter(function(r){return dtMes(r.quitacao);});
     titulo='Recebido — '+dados.length+' pagamento'+(dados.length!==1?'s':'');
-    document.getElementById('ma-det-head').innerHTML=TH_REC;
-    document.getElementById('ma-det-list').innerHTML=dados.map(function(r){
-      return '<tr><td class="ma-det-td mono" style="color:var(--t4);font-size:11px">#'+r.id+'</td><td class="ma-det-td"><strong>'+r.cliente+'</strong></td><td class="ma-det-td mono">'+r.quitacao+'</td><td class="ma-det-td mono tr" style="color:var(--green);font-weight:700">'+maR$(r.valor)+'</td><td class="ma-det-td" style="font-size:11px;color:var(--t3)">'+r.conta+'</td></tr>';
-    }).join('');
+    // Header com coluna Tipo
+    MA_REC_SORT = {col:null, dir:1}; // reset ao abrir
+    var thSort='cursor:pointer;user-select:none;';
+    document.getElementById('ma-det-head').innerHTML=
+      '<tr>'+
+      '<th class="ma-det-th" style="width:36px"></th>'+
+      '<th class="ma-det-th">Cliente</th>'+
+      '<th class="ma-det-th" style="width:110px">Data</th>'+
+      '<th class="ma-det-th" style="width:130px;text-align:right;'+thSort+'" onclick="maRecSortBy(&quot;valor&quot;)" id="ma-th-val">Valor <span id="ma-ico-val">↕</span></th>'+
+      '<th class="ma-det-th" style="width:120px">Conta</th>'+
+      '<th class="ma-det-th" style="width:170px;'+thSort+'" onclick="maRecSortBy(&quot;tipo&quot;)" id="ma-th-tipo">Tipo <span id="ma-ico-tipo">↕</span></th>'+
+      '</tr>';
+    // Mostrar KPIs e toolbar
+    var kp=document.getElementById('ma-rec-kpis');
+    var tb=document.getElementById('ma-rec-toolbar');
+    if(kp)kp.style.display='grid';
+    if(tb)tb.style.display='flex';
+    // Iniciar render
+    // Sincronizar MA_REC_DADOS com MA.received (referências vivas)
+    MA_REC_DADOS = dados;
+    MA_REC_EXP   = {};
+    maRecRender();
   }else if(tipo==='pago'){
     dados=MA.paid.filter(function(r){return dtMes(r.quitacao);});
     titulo='Pago — '+dados.length+' lançamento'+(dados.length!==1?'s':'');
@@ -5579,6 +5900,256 @@ function maDelCom(id,idx){
   r._comentarios.splice(idx,1);maSave();maVerComentarios(id);
 }
 
+
+
+// ══════════════════════════════════════════════════════════════
+//  MÓDULO RECEBIDO — Tipo, Agrupamento, KPIs, Memória
+// ══════════════════════════════════════════════════════════════
+
+var MA_REC_DADOS = [];   // dados do mês atual
+var MA_REC_EXP   = {};   // grupos expandidos {chave: true}
+var MA_REC_SORT  = {col:null, dir:1}; // col: 'valor'|'tipo'|null, dir: 1=asc -1=desc
+var TIPOS_REC = ['Mensalidade','Venda Nova','Venda Nova TCV','Multa','Outros'];
+
+// ── MEMÓRIA DE TIPOS ─────────────────────────────────────────
+// Chave: "ID|cliente|valor" → tipo
+// Fallback: "cliente|valor" → tipo
+function maRecMemKey(r){ return String(r.id)+'|'+r.cliente+'|'+String(maPV(r.valor)); }
+function maRecMemKeyFallback(r){ return r.cliente+'|'+String(maPV(r.valor)); }
+
+function maRecGetMem(){
+  try{ return JSON.parse(localStorage.getItem('ma_rec_tipos_'+CFG.api.slice(-10))||'{}'); }
+  catch(e){ return {}; }
+}
+function maRecSaveMem(mem){
+  try{ localStorage.setItem('ma_rec_tipos_'+CFG.api.slice(-10), JSON.stringify(mem)); }
+  catch(e){}
+}
+
+// Ao classificar um lançamento: salva na memória e no registro
+function maRecSalvarTipo(sel){
+  var id = sel.dataset.recId;
+  var tipo = sel.value;
+  // Encontrar o registro em MA.received
+  var r = MA.received.find(function(x){ return String(x.id)===String(id); });
+  if(!r){ console.warn('maRecSalvarTipo: id não encontrado', id); return; }
+  // Atualizar tipo no objeto
+  r.tipo = tipo;
+  // Atualizar também em MA_REC_DADOS (mesma referência, mas garantir)
+  var rDados = MA_REC_DADOS.find(function(x){ return String(x.id)===String(id); });
+  if(rDados) rDados.tipo = tipo;
+  // Salvar na memória permanente (chave dupla para maior cobertura)
+  var mem = maRecGetMem();
+  mem[maRecMemKey(r)]         = tipo;
+  mem[maRecMemKeyFallback(r)] = tipo;
+  maRecSaveMem(mem);
+  // Persistir no localStorage/CACHE
+  maSave();
+  // Atualizar UI imediatamente
+  maRecKpis();
+  maRecRender();
+  toast('Tipo atualizado: '+tipo,'ok');
+}
+
+// Aplicar memória ao importar novos dados
+function maRecAplicarMemoria(lista){
+  var mem = maRecGetMem();
+  lista.forEach(function(r){
+    // Memória sempre tem prioridade (inclui alterações manuais)
+    // 1. Buscar por ID+cliente+valor (mais preciso)
+    var t = mem[maRecMemKey(r)];
+    // 2. Fallback: nome+valor
+    if(!t) t = mem[maRecMemKeyFallback(r)];
+    // 3. Manter o que veio do Sheets se não tiver na memória
+    // 4. Default final: Mensalidade
+    r.tipo = t || r.tipo || 'Mensalidade';
+  });
+  return lista;
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function maRecKpis(){
+  var kpiEl = document.getElementById('ma-rec-kpis');
+  if(!kpiEl) return;
+  var totais={}, conts={};
+  TIPOS_REC.forEach(function(t){ totais[t]=0; conts[t]=0; });
+  // Agrupar por tipo → contar clientes únicos (não pagamentos)
+  var clientesPorTipo = {};
+  TIPOS_REC.forEach(function(t){ clientesPorTipo[t]={}; });
+  MA_REC_DADOS.forEach(function(r){
+    var t = r.tipo || 'Mensalidade';
+    if(totais[t]===undefined){ totais[t]=0; conts[t]=0; clientesPorTipo[t]={}; }
+    totais[t] += maPV(r.valor);
+    // Contar cliente único por tipo (mesmo cliente com 2 pagamentos TCV = 1 cliente)
+    clientesPorTipo[t][r.cliente] = true;
+  });
+  // conts = número de clientes únicos
+  TIPOS_REC.forEach(function(t){
+    conts[t] = clientesPorTipo[t] ? Object.keys(clientesPorTipo[t]).length : 0;
+  });
+  var cores = {
+    'Mensalidade':   'var(--co)',
+    'Venda Nova':    'var(--green)',
+    'Venda Nova TCV':'#2563EB',
+    'Multa':         'var(--red)',
+    'Outros':        'var(--t3)',
+  };
+  // Mostrar só tipos com valor > 0
+  var ativos = TIPOS_REC.filter(function(t){ return conts[t]>0; });
+  if(!ativos.length) ativos = ['Mensalidade'];
+  kpiEl.style.gridTemplateColumns = 'repeat('+Math.min(ativos.length,4)+',1fr)';
+  kpiEl.innerHTML = ativos.map(function(t){
+    var cor = cores[t]||'var(--t3)';
+    return '<div class="ma-kpi" style="border-left:3px solid '+cor+'">'+
+      '<div class="ma-kpi-label">'+t+'</div>'+
+      '<div class="ma-kpi-val" style="color:'+cor+';font-size:17px">'+maR$(totais[t])+'</div>'+
+      '<div class="ma-kpi-sub">'+conts[t]+' cliente'+(conts[t]!==1?'s':'')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── AGRUPAMENTO INTELIGENTE ───────────────────────────────────
+// Agrupa por cliente + tipo. Cada grupo tem sua própria linha.
+function maRecAgrupar(lista){
+  var grupos = [], mapa = {};
+  lista.forEach(function(r){
+    var tipo = r.tipo || 'Mensalidade';
+    var chave = r.cliente + '|||' + tipo;
+    if(!mapa[chave]){
+      mapa[chave] = {chave:chave, cliente:r.cliente, tipo:tipo, total:0, itens:[], conta:r.conta};
+      grupos.push(mapa[chave]);
+    }
+    mapa[chave].total += maPV(r.valor);
+    mapa[chave].itens.push(r);
+  });
+  return grupos;
+}
+
+// ── ORDENAÇÃO ────────────────────────────────────────────────
+function maRecSortBy(col){
+  if(MA_REC_SORT.col===col) MA_REC_SORT.dir*=-1;
+  else { MA_REC_SORT.col=col; MA_REC_SORT.dir=1; }
+  // Atualizar ícones
+  ['val','tipo'].forEach(function(c){
+    var el=document.getElementById('ma-ico-'+c);
+    if(el) el.textContent='↕';
+  });
+  var ico=document.getElementById('ma-ico-'+(col==='valor'?'val':'tipo'));
+  if(ico) ico.textContent=MA_REC_SORT.dir===1?'↑':'↓';
+  maRecRender();
+}
+
+// ── RENDER PRINCIPAL ─────────────────────────────────────────
+function maRecRender(){
+  var busca = (document.getElementById('ma-rec-search')||{}).value||'';
+  busca = busca.toLowerCase();
+
+  var lista = MA_REC_DADOS.filter(function(r){
+    return !busca || r.cliente.toLowerCase().indexOf(busca)>=0;
+  });
+
+  var grupos = maRecAgrupar(lista);
+
+  // Ordenar grupos conforme seleção
+  grupos.sort(function(a,b){
+    if(MA_REC_SORT.col==='valor'){
+      return (a.total-b.total)*MA_REC_SORT.dir;
+    } else if(MA_REC_SORT.col==='tipo'){
+      var ia=TIPOS_REC.indexOf(a.tipo), ib=TIPOS_REC.indexOf(b.tipo);
+      var r=ia-ib;
+      if(r===0){ if(a.cliente<b.cliente)return -1; if(a.cliente>b.cliente)return 1; }
+      return r*MA_REC_SORT.dir;
+    } else {
+      // Padrão: cliente A-Z, depois tipo
+      if(a.cliente < b.cliente) return -1;
+      if(a.cliente > b.cliente) return 1;
+      return TIPOS_REC.indexOf(a.tipo) - TIPOS_REC.indexOf(b.tipo);
+    }
+  });
+
+  var CORES_TIPO = {
+    'Mensalidade':   'var(--co)',
+    'Venda Nova':    'var(--green)',
+    'Venda Nova TCV':'#2563EB',
+    'Multa':         'var(--red)',
+    'Outros':        'var(--t3)',
+  };
+
+  var rows = '';
+  grupos.forEach(function(g){
+    var exp    = !!MA_REC_EXP[g.chave];
+    var count  = g.itens.length;
+    var cor    = CORES_TIPO[g.tipo] || 'var(--t3)';
+    var dataEx = g.itens.map(function(r){return r.quitacao;}).sort().pop()||'';
+
+    // Linha do grupo
+    rows += '<tr style="background:var(--bg);border-bottom:2px solid var(--border)">'+
+      '<td class="ma-det-td" style="text-align:center;padding:8px 4px">'+
+        '<button data-chave="'+g.chave.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" onclick="maRecToggleEl(this)" '+
+          'style="background:none;border:none;cursor:pointer;color:var(--co);font-size:15px;line-height:1;padding:0;width:22px;transition:transform .15s" '+
+          'title="'+(exp?'Recolher':'Expandir')+'">'+
+          (exp?'▾':'▸')+
+        '</button>'+
+      '</td>'+
+      '<td class="ma-det-td" style="white-space:normal">'+
+        '<strong>'+g.cliente+'</strong>'+
+        (count>1?'<span style="margin-left:8px;background:var(--bg);border:1px solid var(--border);border-radius:99px;font-size:10px;padding:1px 7px;color:var(--t3);font-weight:600">'+count+'x</span>':'')+
+      '</td>'+
+      '<td class="ma-det-td mono" style="color:var(--t4);font-size:11px">'+dataEx+'</td>'+
+      '<td class="ma-det-td mono tr" style="font-weight:700;color:var(--green)">'+maR$(g.total)+'</td>'+
+      '<td class="ma-det-td" style="font-size:11px;color:var(--t3)">'+g.conta+'</td>'+
+      '<td class="ma-det-td">'+
+        '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:var(--bg);border:1px solid var(--border);color:'+cor+'">'+
+          g.tipo+
+        '</span>'+
+      '</td>'+
+    '</tr>';
+
+    // Linhas filhas (expandidas)
+    if(exp){
+      g.itens.forEach(function(r){
+        var opts = TIPOS_REC.map(function(t){
+          return '<option value="'+t+'"'+((r.tipo||'Mensalidade')===t?' selected':'')+'>'+t+'</option>';
+        }).join('');
+        rows += '<tr style="background:#F8FAFF">'+
+          '<td class="ma-det-td" style="padding-left:18px;color:var(--t4);font-size:11px;text-align:right">↳</td>'+
+          '<td class="ma-det-td" style="padding-left:14px;font-size:12px;color:var(--t2)">'+
+            '<span style="color:var(--t4);font-family:var(--mono);font-size:11px;margin-right:6px">#'+r.id+'</span>'+
+            r.cliente+
+          '</td>'+
+          '<td class="ma-det-td mono" style="font-size:11px">'+r.quitacao+'</td>'+
+          '<td class="ma-det-td mono tr" style="color:var(--green);font-weight:600;font-size:12px">'+maR$(r.valor)+'</td>'+
+          '<td class="ma-det-td" style="font-size:11px;color:var(--t3)">'+r.conta+'</td>'+
+          '<td class="ma-det-td">'+
+            '<select class="ma-regua" data-rec-id="'+r.id+'" onchange="maRecSalvarTipo(this)" '+
+              'style="font-size:11px;padding:3px 8px;max-width:160px;border-color:'+cor+'">'+
+              opts+
+            '</select>'+
+          '</td>'+
+        '</tr>';
+      });
+    }
+  });
+
+  document.getElementById('ma-det-list').innerHTML = rows;
+  var emEl = document.getElementById('ma-det-empty');
+  if(emEl) emEl.style.display = grupos.length ? 'none' : 'block';
+
+  maRecKpis();
+}
+
+function maRecToggle(chave){
+  if(MA_REC_EXP[chave]) delete MA_REC_EXP[chave];
+  else MA_REC_EXP[chave] = true;
+  maRecRender();
+}
+function maRecToggleEl(btn){
+  // Usar data-chave para evitar problema de aspas
+  var chave = btn.dataset.chave;
+  if(!chave) return;
+  maRecToggle(chave);
+}
+
 function renderMaDetalhe(){if(MA._detalhe)maVerDetalhe(MA._detalhe);else nav('mes_atual');}
 
 
@@ -5590,11 +6161,9 @@ async function maPullFromSheets(){ return; }
 
 // ── INIT ─────────────────────────────────────────────────────
 function initMesAtual(){
-  // Sempre iniciar no mês ANTERIOR ao atual
-  var prev=new Date();
-  prev.setDate(1);
-  prev.setMonth(prev.getMonth()-1);
-  var m=prev.getMonth()+1, a=prev.getFullYear();
+  // Visão do Mês Atual → sempre abre no mês CORRENTE
+  var now=new Date();
+  var m=now.getMonth()+1, a=now.getFullYear();
   var ms=document.getElementById('ma-mes');var as=document.getElementById('ma-ano');
   if(ms)Array.from(ms.options).forEach(function(o){if(parseInt(o.value)===m)o.selected=true;});
   if(as)Array.from(as.options).forEach(function(o){if(parseInt(o.value)===a)o.selected=true;});
