@@ -672,7 +672,7 @@ body.pres #app{margin-top:34px}
           <div id="dBalEmpty" class="empty" style="display:none;padding:18px"><div class="es">Registre em <strong>Saldo Bancário</strong></div></div>
           <div style="height:210px;position:relative;padding:12px 20px 16px" id="dBalWrap"><canvas id="cDashBal"></canvas></div>
         </div>
-      </div>
+      </div><!-- /pg-dashboard -->
 
       <!-- DRE -->
       <div id="pg-dre" class="page">
@@ -1179,7 +1179,6 @@ body.pres #app{margin-top:34px}
             <div style="font-size:14px;font-weight:600;color:var(--t3)">Nenhum registro encontrado</div>
           </div>
         </div>
-      </div>
       </div>
 
     </main>
@@ -2186,6 +2185,7 @@ function renderDash(){
 
   initHistSelects();
   renderHistorico();
+  renderDashHistTable();
 
   // Bar chart — breakdown por tipo na receita
   const coTypes=getTypes();
@@ -2488,6 +2488,96 @@ function renderHistorico(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:histTooltip('Resultado')},scales:histScales()}});
 }
+
+// ── TABELA HISTÓRICO ANUAL DO DASHBOARD ──────────────────────────────
+function renderDashHistTable(){
+  var pg = document.getElementById('pg-dashboard');
+  if(!pg) return;
+  if(!document.getElementById('dashHistTable')){
+    var div = document.createElement('div');
+    div.className = 'panel mb14';
+    div.id = 'dashHistTable';
+    div.innerHTML =
+      '<div class="ph2" style="padding-bottom:8px">'+
+        '<span class="pt2">Histórico Anual</span>'+
+        '<span id="dashHistSub" style="font-size:11px;color:var(--t3);margin-left:8px"></span>'+
+      '</div>'+
+      '<div style="overflow-x:auto">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:760px">'+
+          '<thead><tr style="border-bottom:2px solid var(--border)">'+
+            '<th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Mês / Ano</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Receita Total</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Desp. Operacional</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Resultado Op. R$</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Margem %</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Retirada de Lucro</th>'+
+            '<th style="padding:8px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">Saldo Bancário</th>'+
+          '</tr></thead>'+
+          '<tbody id="dashHistBody"></tbody>'+
+        '</table>'+
+      '</div>';
+    pg.appendChild(div);
+  }
+  var body = document.getElementById('dashHistBody');
+  var sub  = document.getElementById('dashHistSub');
+  if(!body) return;
+
+  // Pegar todos os YMs disponíveis, ordenar cronologicamente
+  var yms = Object.keys(CACHE.revenues||{}).concat(Object.keys(CACHE.expenses||{}));
+  yms = [...new Set(yms)].sort();
+  if(!yms.length){ body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--t4)">Sem dados</td></tr>'; return; }
+
+  // Filtrar pelo ano do mês selecionado no Fechamento Mensal
+  var ano = ymOf(S.month).split('-')[0];
+  var ymsAno = yms.filter(function(ym){ return ym.startsWith(ano); });
+  if(!ymsAno.length) ymsAno = yms;
+
+  if(sub) sub.textContent = ymsAno.length + ' meses · ' + ano;
+
+  var bls = getBls();
+  var rows = '';
+  var totRec=0, totDesp=0, totRes=0, totRet=0;
+
+  ymsAno.forEach(function(ym){
+    var d   = calcDRE(ym);
+    var bal = bls[ym] ? +bls[ym].value : null;
+    var mg  = d.tv > 0 ? (d.opR/d.tv*100) : 0;
+    var ret = d.pt; // Retirada de Lucro (profit)
+    var corRes = d.opR >= 0 ? 'var(--green)' : 'var(--red)';
+    var corMg  = mg >= 0 ? 'var(--green)' : 'var(--red)';
+
+    totRec  += d.tv;
+    totDesp += d.te;
+    totRes  += d.opR;
+    totRet  += ret;
+
+    rows += '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:9px 14px;font-weight:600;white-space:nowrap">' + fmtYM(ym) + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono)">' + R$(d.tv) + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--red)">' + R$(d.te) + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:'+corRes+';font-weight:700">' + R$(d.opR) + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:'+corMg+';font-weight:600">' + (d.tv>0 ? mg.toFixed(1)+'%' : '—') + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--t2)">' + (ret > 0 ? R$(ret) : '—') + '</td>' +
+      '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:600">' + (bal !== null ? R$(bal) : '—') + '</td>' +
+    '</tr>';
+  });
+
+  // Linha de totais
+  var totMg = totRec > 0 ? (totRes/totRec*100) : 0;
+  var corTotRes = totRes >= 0 ? 'var(--green)' : 'var(--red)';
+  rows += '<tr style="border-top:2px solid var(--border);background:var(--bg)">' +
+    '<td style="padding:9px 14px;font-weight:800;font-size:11px;color:var(--t3);letter-spacing:.04em;text-transform:uppercase">Total ' + ano + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:700">' + R$(totRec) + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:700;color:var(--red)">' + R$(totDesp) + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:800;color:'+corTotRes+'">' + R$(totRes) + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:700;color:'+corTotRes+'">' + (totRec>0 ? totMg.toFixed(1)+'%' : '—') + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:700;color:var(--t2)">' + (totRet>0 ? R$(totRet) : '—') + '</td>' +
+    '<td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-weight:700">—</td>' +
+  '</tr>';
+
+  body.innerHTML = rows;
+}
+
 
 function renderDRE(){
   if(!CACHE._loaded)return;
