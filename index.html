@@ -674,6 +674,12 @@ body.pres #app{margin-top:34px}
         </div>
       </div><!-- /pg-dashboard -->
 
+      <!-- DISTRIBUIÇÃO DO RESULTADO -->
+      <div id="pg-distrib" class="page">
+        <div class="ph"><div><div class="pt">Distribuição do Resultado</div><div class="ps" id="distSub">—</div></div></div>
+        <div id="distContent" style="padding:0 20px 20px"></div>
+      </div>
+
       <!-- DRE -->
       <div id="pg-dre" class="page">
         <div class="ph"><div><div class="pt">DRE Simplificada</div><div class="ps">Demonstração do resultado do exercício</div></div></div>
@@ -1303,7 +1309,7 @@ const CFG = {
   name     : 'Vanguarda',
   api      : 'https://script.google.com/macros/s/AKfycbw5FfCHa84adeHD6GxY6yqF1YsI9dWt7d03ftKn1aDVtulb4Kvps0KZaV3i1uMnhmVt4w/exec',
   color    : '#2563EB',
-  sections : ["dashboard", "mes_atual", "ma-detalhe", "dre", "revenues", "expenses", "balance", "comparison", "cashflow", "pricing", "import", "settings"],
+  sections : ["dashboard", "mes_atual", "ma-detalhe", "dre", "revenues", "expenses", "balance", "comparison", "cashflow", "distrib", "pricing", "import", "settings"],
   types    : [{"id": "recurrent", "label": "Recorrente", "badge": "br", "fixed": true}, {"id": "tcv", "label": "TCV", "badge": "bf", "fixed": true}, {"id": "fine", "label": "Multa", "badge": "bu", "fixed": true}, {"id": "entry", "label": "Entrada", "badge": "bv", "fixed": true}, {"id": "other", "label": "Outros", "badge": "bt", "fixed": true}],
   employees: 1,
   obs      : '',
@@ -1542,8 +1548,30 @@ async function pullFromSheets(){
   // Settings — preservar tipos e usuários locais ao puxar do Sheets
   var oldTypesRaw = CACHE.settings['__types__'] || '';
   var oldUsersRaw = CACHE.settings['__users__'] || '';
+  // Preservar configurações locais (__dist__, __tcv_months__)
+  // Lendo tanto do CACHE atual quanto do localStorage direto
+  var oldDistKeys = {};
+  Object.keys(CACHE.settings).forEach(function(k){
+    if(k.startsWith('__dist__') || k.indexOf('__tcv_months__')>=0) oldDistKeys[k]=CACHE.settings[k];
+  });
+  // Também tentar ler do localStorage direto (mais confiável)
+  try{
+    var lsRaw=localStorage.getItem(LS_KEY);
+    if(lsRaw){
+      var lsData=JSON.parse(lsRaw);
+      if(lsData&&lsData.settings){
+        Object.keys(lsData.settings).forEach(function(k){
+          if(k.startsWith('__dist__') || k.indexOf('__tcv_months__')>=0) oldDistKeys[k]=lsData.settings[k];
+        });
+      }
+    }
+  }catch(e){}
   CACHE.settings = {};
   (data.settings||[]).forEach(function(s){ CACHE.settings[s.key]=s.value; });
+  // Restaurar — localStorage tem prioridade sobre Sheets para __dist__
+  Object.keys(oldDistKeys).forEach(function(k){
+    if(!CACHE.settings[k] || CACHE.settings[k]==='0') CACHE.settings[k]=oldDistKeys[k];
+  });
 
   // Mesclar tipos customizados
   if(oldTypesRaw){
@@ -1944,6 +1972,7 @@ const NAV_DEFS=[
   {id:'balance',    label:'Saldo Bancário',          grp:'Menu'},
   {id:'comparison', label:'Comparativos',            grp:'Menu'},
   {id:'cashflow',   label:'Fluxo de Caixa',          grp:'Menu'},
+  {id:'distrib',    label:'Distribuição do Resultado', grp:'Menu'},
   {id:'tcv',        label:'Controle de Recebimento', grp:'Ferramentas'},
   {id:'pricing',    label:'Precificação',            grp:'Ferramentas'},
   {id:'import',     label:'Importar',               grp:'Ferramentas'},
@@ -1968,6 +1997,7 @@ const ICONS={
   cashflow:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',
   tcv:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
   settings:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
+  distrib:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
 };
 
 function buildSidebar(){
@@ -1995,7 +2025,7 @@ function togSB(){
 const PAGE_RENDERS={
   dashboard:renderDash, mes_atual:renderMesAtual, 'ma-detalhe':renderMaDetalhe, dre:renderDRE, revenues:renderRevs,
   expenses:renderExps,  balance:renderBal, comparison:renderComparison,
-  cashflow:renderCashflow, tcv:renderTcv, pricing:renderPricing,
+  cashflow:renderCashflow, distrib:renderDistrib, tcv:renderTcv, pricing:renderPricing,
   import:renderImpHist, settings:renderSettings,
 };
 let curPage = 'dashboard';
@@ -2297,9 +2327,10 @@ function renderDash(){
   const prevFrom=selFrom.value, prevTo=selTo.value;
   selFrom.innerHTML=allYMs.map(function(y){return '<option value="'+y+'">'+fmtYM(y)+'</option>';}).join('');
   selTo.innerHTML  =selFrom.innerHTML;
-  // Default: De Janeiro/2026 até mês anterior ao atual
-  var defaultFrom='2026-01';
-  var prevMonthDate=new Date(S.month);prevMonthDate.setMonth(prevMonthDate.getMonth()-1);
+  // Default: Janeiro do ano atual → mês anterior ao mês corrente
+  var anoAtual=new Date().getFullYear();
+  var defaultFrom=anoAtual+'-01';
+  var prevMonthDate=new Date();prevMonthDate.setDate(1);prevMonthDate.setMonth(prevMonthDate.getMonth()-1);
   var defaultTo=ymOf(prevMonthDate);
   if(allYMs.includes(prevFrom))selFrom.value=prevFrom; else selFrom.value=allYMs.includes(defaultFrom)?defaultFrom:allYMs[0];
   if(allYMs.includes(prevTo))  selTo.value=prevTo;   else selTo.value=allYMs.includes(defaultTo)?defaultTo:allYMs[allYMs.length-1];
@@ -2576,6 +2607,177 @@ function renderDashHistTable(){
   '</tr>';
 
   body.innerHTML = rows;
+}
+
+
+// ── DISTRIBUIÇÃO DO RESULTADO ─────────────────────────────────────
+var DIST_LINHAS=[
+  {id:'giro',       label:'Capital de Giro',                   default:15},
+  {id:'estrutural', label:'Investimento Estrutural/Processual', default:15},
+  {id:'trabalhista',label:'Capital Trabalhista',                default:5},
+  {id:'emergencial',label:'Caixa Emergencial',                  default:10},
+];
+
+function distGetCfg(ym){
+  var raw=CACHE.settings['__dist__'+ym];
+  if(raw){try{var p=JSON.parse(raw);if(p&&typeof p==='object')return p;}catch(e){}}
+  var praw=CACHE.settings['__dist__'+prevYM(ym)];
+  if(praw){try{var pp=JSON.parse(praw);if(pp&&typeof pp==='object')return pp;}catch(e){}}
+  var d={};DIST_LINHAS.forEach(function(l){d[l.id]=l.default;});return d;
+}
+function distSaveCfg(ym,cfg){
+  CACHE.settings['__dist__'+ym]=JSON.stringify(cfg);
+  saveLocalCache();
+  queueWrite('settings',[{key:'__dist__'+ym,value:JSON.stringify(cfg)}]);
+}
+function distSetPct(inp){
+  var ym=inp.dataset.ym,id=inp.dataset.lid;
+  var val=Math.max(0,Math.min(100,parseFloat(inp.value)||0));
+  var cfg=distGetCfg(ym);cfg[id]=val;distSaveCfg(ym,cfg);
+  renderDistrib();
+}
+
+function renderDistrib(){
+  if(!CACHE._loaded)return;
+  var ym=ymOf(S.month);
+  var sub=document.getElementById('distSub');
+  if(sub)sub.textContent=fmtYM(ym).toUpperCase();
+  var cont=document.getElementById('distContent');
+  if(!cont)return;
+
+  var dre=calcDRE(ym);
+  var fat=dre.opR;
+  var cfg=distGetCfg(ym);
+  var g=fat>=0?'#16A34A':'#DC2626';
+
+  // Calcular totais do mês
+  var tP=0,tV=0;
+  DIST_LINHAS.forEach(function(l){
+    tP+=(cfg[l.id]||0);
+    tV+=fat*(cfg[l.id]||0)/100;
+  });
+  var sP=100-tP,sV=fat-tV;
+  var sg=sV>=0?'#16A34A':'#DC2626';
+
+  // ── Tabela do mês ──────────────────────────────────────────────
+  var h='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:24px;overflow:hidden">';
+
+  // Header do mês
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:2px solid #e2e8f0;background:#f5f3ff">';
+  h+='<span style="font-size:14px;font-weight:800;color:#2563EB">'+fmtYM(ym).toUpperCase()+'</span>';
+  h+='<div style="text-align:right"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Resultado Operacional</div>';
+  h+='<div style="font-size:18px;font-weight:800;color:'+g+'">'+R$(fat)+'</div></div>';
+  h+='</div>';
+
+  // Tabela
+  h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
+  h+='<thead><tr style="background:#f8fafc">';
+  h+='<th style="padding:9px 20px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #e2e8f0">Descri\xe7\xe3o</th>';
+  h+='<th style="padding:9px 20px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #e2e8f0">%</th>';
+  h+='<th style="padding:9px 20px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #e2e8f0">Valor</th>';
+  h+='</tr></thead><tbody>';
+
+  // Resultado Operacional = base
+  h+='<tr style="background:#f0fdf4">';
+  h+='<td style="padding:11px 20px;font-weight:700;color:#16A34A">Resultado Operacional</td>';
+  h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#16A34A">100,00%</td>';
+  h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#16A34A">'+R$(fat)+'</td>';
+  h+='</tr>';
+
+  // Separador
+  h+='<tr><td colspan="3" style="padding:6px 20px;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-top:2px solid #e2e8f0">Distribui\xe7\xe3o</td></tr>';
+
+  // Linhas editáveis
+  DIST_LINHAS.forEach(function(l){
+    var pct=cfg[l.id]||0,val=fat*pct/100;
+    h+='<tr style="border-bottom:1px solid #e2e8f0">';
+    h+='<td style="padding:10px 20px;color:#334155">'+l.label+'</td>';
+    h+='<td style="padding:6px 20px;text-align:right">';
+    h+='<input type="number" min="0" max="100" step="0.1" value="'+pct+'" ';
+    h+='data-ym="'+ym+'" data-lid="'+l.id+'" onchange="distSetPct(this)" ';
+    h+='style="width:65px;padding:3px 6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;text-align:right;outline:none">&nbsp;%';
+    h+='</td>';
+    h+='<td style="padding:10px 20px;text-align:right;font-weight:600;color:#334155">'+R$(val)+'</td>';
+    h+='</tr>';
+  });
+
+  // Total destinado
+  h+='<tr style="border-top:2px solid #e2e8f0;background:#f8fafc">';
+  h+='<td style="padding:11px 20px;font-weight:700;color:#475569">Total destinado \xe0 sa\xfade da empresa</td>';
+  h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#475569">'+tP.toFixed(2)+'%</td>';
+  h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#475569">'+R$(tV)+'</td>';
+  h+='</tr>';
+
+  // Saldo para distribuição
+  h+='<tr style="background:'+(sV>=0?'#f0fdf4':'#fff1f2')+'">';
+  h+='<td style="padding:12px 20px;font-weight:800;color:'+sg+'">Saldo para distribui\xe7\xe3o</td>';
+  h+='<td style="padding:12px 20px;text-align:right;font-weight:800;color:'+sg+'">'+sP.toFixed(2)+'%</td>';
+  h+='<td style="padding:12px 20px;text-align:right;font-weight:800;color:'+sg+'">'+R$(sV)+'</td>';
+  h+='</tr>';
+
+  h+='</tbody></table></div>';
+
+  // ── Tabela acumulada do ano ────────────────────────────────────
+  var ano=ym.split('-')[0];
+  var ymsAno=Array.from(new Set(
+    Object.keys(CACHE.revenues||{}).concat(Object.keys(CACHE.expenses||{}))
+  )).filter(function(y){return y.startsWith(ano);}).sort();
+
+  if(ymsAno.length>1){
+    var acum={fat:0,tP:0,tV:0,sV:0};
+    var acumLinhas={};
+    DIST_LINHAS.forEach(function(l){acumLinhas[l.id]={val:0};});
+
+    ymsAno.forEach(function(m){
+      var d=calcDRE(m),f=d.opR,c=distGetCfg(m);
+      var mTP=0,mTV=0;
+      DIST_LINHAS.forEach(function(l){
+        var pct=c[l.id]||0,v=f*pct/100;
+        mTP+=pct; mTV+=v;
+        acumLinhas[l.id].val+=v;
+      });
+      acum.fat+=f;
+      acum.tV+=mTV;
+      acum.sV+=(f-mTV);
+    });
+    acum.tP=acum.fat>0?(acum.tV/acum.fat*100):0;
+    acum.sP=acum.fat>0?(acum.sV/acum.fat*100):0;
+    var ag=acum.fat>=0?'#16A34A':'#DC2626';
+    var asg=acum.sV>=0?'#16A34A':'#DC2626';
+
+    h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:2px solid #e2e8f0;background:#f8fafc">';
+    h+='<div>';
+    h+='<span style="font-size:14px;font-weight:800;color:#1e293b">Acumulado '+ano+'</span>';
+    h+='<span style="margin-left:8px;font-size:11px;color:#94a3b8">'+ymsAno.length+' meses</span>';
+    h+='</div>';
+    h+='<div style="text-align:right"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Total Resultado Op.</div>';
+    h+='<div style="font-size:18px;font-weight:800;color:'+ag+'">'+R$(acum.fat)+'</div></div>';
+    h+='</div>';
+
+    h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
+    h+='<thead><tr style="background:#f8fafc">';
+    h+='<th style="padding:9px 20px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #e2e8f0">Categoria</th>';
+    h+='<th style="padding:9px 20px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #e2e8f0">Acumulado</th>';
+    h+='</tr></thead><tbody>';
+
+    h+='<tr style="background:#f0fdf4"><td style="padding:11px 20px;font-weight:700;color:#16A34A">Resultado Operacional</td>';
+    h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#16A34A">'+R$(acum.fat)+'</td></tr>';
+
+    DIST_LINHAS.forEach(function(l){
+      h+='<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:10px 20px;color:#334155">'+l.label+'</td>';
+      h+='<td style="padding:10px 20px;text-align:right;font-weight:600;color:#334155">'+R$(acumLinhas[l.id].val)+'</td></tr>';
+    });
+
+    h+='<tr style="border-top:2px solid #e2e8f0;background:#f8fafc"><td style="padding:11px 20px;font-weight:700;color:#475569">Total destinado \xe0 sa\xfade da empresa</td>';
+    h+='<td style="padding:11px 20px;text-align:right;font-weight:700;color:#475569">'+R$(acum.tV)+'</td></tr>';
+    h+='<tr style="background:'+(acum.sV>=0?'#f0fdf4':'#fff1f2')+'"><td style="padding:12px 20px;font-weight:800;color:'+asg+'">Saldo para distribui\xe7\xe3o</td>';
+    h+='<td style="padding:12px 20px;text-align:right;font-weight:800;color:'+asg+'">'+R$(acum.sV)+'</td></tr>';
+
+    h+='</tbody></table></div>';
+  }
+
+  cont.innerHTML=h;
 }
 
 
